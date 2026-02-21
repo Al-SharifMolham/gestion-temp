@@ -1,0 +1,19 @@
+FROM node:20
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy frontend source
+COPY . .
+
+# Expose Vite port
+EXPOSE 3000
+
+# Run Vite dev server (important: bind to 0.0.0.0)
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
