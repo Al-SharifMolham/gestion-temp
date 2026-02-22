@@ -5,6 +5,15 @@ import Loader from '../../components/ui/Loader';
 
 const USER_ROLES = ['admin', 'instructor', 'student'];
 
+const roleBadge = (role) => {
+    const styles = {
+        admin: 'badge-blue',
+        instructor: 'badge-amber',
+        student: 'badge-green',
+    };
+    return <span className={styles[role] || 'badge-gray'}>{role}</span>;
+};
+
 export default function ManageUsersPage() {
     const [users, setUsers] = useState([]);
     const [groups, setGroups] = useState([]);
@@ -30,25 +39,19 @@ export default function ManageUsersPage() {
         }
     };
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    useEffect(() => { loadData(); }, []);
 
     const handleCreate = () => {
         setEditingUser(null);
         setFormData({ name: '', email: '', password: '', role: 'student', group_id: '' });
+        setError('');
         setIsModalOpen(true);
     };
 
     const handleEdit = (user) => {
         setEditingUser(user);
-        setFormData({
-            name: user.name,
-            email: user.email,
-            password: '',
-            role: user.role,
-            group_id: user.group_id || ''
-        });
+        setFormData({ name: user.name, email: user.email, password: '', role: user.role, group_id: user.group_id || '' });
+        setError('');
         setIsModalOpen(true);
     };
 
@@ -73,21 +76,15 @@ export default function ManageUsersPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-
         const validationError = validateForm();
-        if (validationError) {
-            setError(validationError);
-            return;
-        }
+        if (validationError) { setError(validationError); return; }
 
         try {
             if (editingUser) {
-                // Update
                 const payload = { ...formData };
                 if (!payload.password) delete payload.password;
                 await userService.updateUser(editingUser.id, payload);
             } else {
-                // Create
                 await userService.createUser(formData);
             }
             setIsModalOpen(false);
@@ -98,41 +95,52 @@ export default function ManageUsersPage() {
     };
 
     return (
-        <div>
+        <div className="animate-slide-up">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Manage Users</h1>
-                <button onClick={handleCreate} className="btn-primary">+ New User</button>
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Users</h1>
+                    <p className="text-sm text-gray-500 mt-1">{users.length} total users</p>
+                </div>
+                <button onClick={handleCreate} className="btn-primary flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    New User
+                </button>
             </div>
 
             {loading ? <Loader /> : (
-                <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Group</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <div className="bg-white rounded-xl shadow-card border border-gray-100/80 overflow-hidden">
+                    <table className="min-w-full">
+                        <thead>
+                            <tr className="border-b border-gray-100">
+                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
+                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
+                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Group</th>
+                                <th className="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-50">
                             {users.map(user => (
-                                <tr key={user.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className="text-sm font-medium text-gray-900">{user.name}</span>
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{user.role}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.group_name || '-'}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button onClick={() => handleEdit(user)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
-                                        <button onClick={() => handleDelete(user.id)} className="text-red-600 hover:text-red-900">Delete</button>
+                                    <td className="px-6 py-4 whitespace-nowrap">{roleBadge(user.role)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.group_name || <span className="text-gray-300">—</span>}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                                        <button onClick={() => handleEdit(user)} className="btn-ghost text-indigo-600 hover:text-indigo-800 mr-1">Edit</button>
+                                        <button onClick={() => handleDelete(user.id)} className="btn-ghost text-red-500 hover:text-red-700">Delete</button>
                                     </td>
                                 </tr>
                             ))}
                             {users.length === 0 && (
                                 <tr>
-                                    <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                                        No users found.
+                                    <td colSpan="5" className="px-6 py-12 text-center">
+                                        <p className="text-sm text-gray-400">No users found</p>
+                                        <button onClick={handleCreate} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium mt-1">Create one</button>
                                     </td>
                                 </tr>
                             )}
@@ -141,35 +149,35 @@ export default function ManageUsersPage() {
                 </div>
             )}
 
-            <Modal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title={editingUser ? 'Edit User' : 'New User'}
-            >
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                    {error && <div className="text-red-600 text-sm bg-red-50 p-2 rounded">{error}</div>}
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingUser ? 'Edit User' : 'New User'}>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {error && (
+                        <div className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg border border-red-100">{error}</div>
+                    )}
                     <div>
-                        <label className="block text-xs font-medium text-gray-700">Name</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Name</label>
                         <input type="text" className="input-field" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-gray-700">Email</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Email</label>
                         <input type="email" className="input-field" required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-gray-700">Password <span className="text-gray-400 font-normal">{editingUser ? '(Leave blank to keep)' : '(Min 6 chars)'}</span></label>
-                        <input type="password" className="input-field" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                            Password {editingUser && <span className="text-gray-400 font-normal">(leave blank to keep)</span>}
+                        </label>
+                        <input type="password" className="input-field" placeholder={editingUser ? '••••••' : 'Min 6 characters'} value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="block text-xs font-medium text-gray-700">Role</label>
-                            <select className="input-field" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
+                            <label className="block text-xs font-medium text-gray-600 mb-1.5">Role</label>
+                            <select className="input-field capitalize" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
                                 {USER_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                             </select>
                         </div>
                         {formData.role === 'student' && (
                             <div>
-                                <label className="block text-xs font-medium text-gray-700">Group</label>
+                                <label className="block text-xs font-medium text-gray-600 mb-1.5">Group</label>
                                 <select className="input-field" value={formData.group_id} onChange={e => setFormData({ ...formData, group_id: e.target.value })}>
                                     <option value="">Select Group</option>
                                     {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -177,9 +185,9 @@ export default function ManageUsersPage() {
                             </div>
                         )}
                     </div>
-                    <div className="flex justify-end gap-2 pt-2">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary text-sm">Cancel</button>
-                        <button type="submit" className="btn-primary text-sm">Save</button>
+                    <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">Cancel</button>
+                        <button type="submit" className="btn-primary">{editingUser ? 'Save Changes' : 'Create User'}</button>
                     </div>
                 </form>
             </Modal>

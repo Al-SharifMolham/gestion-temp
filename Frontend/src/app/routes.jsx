@@ -6,6 +6,7 @@ import LoginPage from '../pages/auth/LoginPage';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import ManageUsersPage from '../pages/admin/ManageUsersPage';
 import ManageTimetablePage from '../pages/admin/ManageTimetablePage';
+import ManageResourcesPage from '../pages/admin/ManageResourcesPage';
 import InstructorTimetablePage from '../pages/instructor/InstructorTimetablePage';
 import StudentTimetablePage from '../pages/student/StudentTimetablePage';
 import NotFoundPage from '../pages/common/NotFoundPage';
@@ -34,6 +35,7 @@ export default function AppRoutes() {
                         <Route path="/admin" element={<AdminDashboard />} />
                         <Route path="/admin/users" element={<ManageUsersPage />} />
                         <Route path="/admin/timetable" element={<ManageTimetablePage />} />
+                        <Route path="/admin/resources" element={<ManageResourcesPage />} />
                     </Route>
 
                     {/* Instructor Routes */}

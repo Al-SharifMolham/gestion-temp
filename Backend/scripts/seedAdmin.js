@@ -1,28 +1,34 @@
 import "dotenv/config";
+import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import db from "../config/db.js";
+import User from "../models/User.js";
+
+const MONGO_URI =
+  process.env.MONGO_URI || "mongodb://127.0.0.1:27017/timetable_db";
 
 const seedAdmin = async () => {
   try {
-    const adminEmail =
-      process.env.ADMIN_EMAIL || "admin@school.com";
-    const adminPassword =
-      process.env.ADMIN_PASSWORD || "password123";
+    await mongoose.connect(MONGO_URI);
+
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@school.com";
+    const adminPassword = process.env.ADMIN_PASSWORD || "password123";
 
     const hash = await bcrypt.hash(adminPassword, 10);
 
-    const [result] = await db.query(
-      `INSERT INTO users (name, email, password_hash, role)
-       VALUES ('System Admin', ?, ?, 'admin')
-       ON DUPLICATE KEY UPDATE id = id`,
-      [adminEmail, hash]
+    await User.findOneAndUpdate(
+      { email: adminEmail },
+      {
+        name: "System Admin",
+        email: adminEmail,
+        password_hash: hash,
+        role: "admin",
+      },
+      { upsert: true, new: true }
     );
 
-    if (result.affectedRows > 0) {
-      console.log("✅ Admin user created / already exists");
-      console.log(`📧 Email: ${adminEmail}`);
-      console.log(`🔑 Password: ${adminPassword}`);
-    }
+    console.log("✅ Admin user created / already exists");
+    console.log(`📧 Email: ${adminEmail}`);
+    console.log(`🔑 Password: ${adminPassword}`);
 
     process.exit(0);
   } catch (err) {

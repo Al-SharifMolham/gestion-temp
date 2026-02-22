@@ -1,13 +1,17 @@
-import db from "../config/db.js";
+import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 
 const getAllUsers = async () => {
-  const [rows] = await db.query(`
-    SELECT u.id, u.name, u.email, u.role, u.group_id, g.name AS group_name
-    FROM users u
-    LEFT JOIN \`groups\` g ON u.group_id = g.id
-  `);
-  return rows;
+  const users = await User.find().populate("group_id", "name").lean();
+  return users.map((u) => {
+    const { password_hash, __v, _id, group_id, ...rest } = u;
+    return {
+      ...rest,
+      id: _id,
+      group_id: group_id?._id || null,
+      group_name: group_id?.name || null,
+    };
+  });
 };
 
 const createUser = async (userData) => {
@@ -22,55 +26,40 @@ const createUser = async (userData) => {
   const normalizedGroupId =
     group_id === undefined || group_id === "" ? null : group_id;
 
-  const [result] = await db.query(
-    "INSERT INTO users (name, email, password_hash, role, group_id) VALUES (?, ?, ?, ?, ?)",
-    [name, email, password_hash, role, normalizedGroupId]
-  );
+  const user = await User.create({
+    name,
+    email,
+    password_hash,
+    role,
+    group_id: normalizedGroupId,
+  });
 
-  // NEVER return password or password_hash
-  return { id: result.insertId, name, email, role, group_id: normalizedGroupId };
+  return { id: user._id, name, email, role, group_id: normalizedGroupId };
 };
 
 const updateUser = async (id, userData) => {
   const { name, email, password, role, group_id } = userData;
 
-  const updates = [];
-  const values = [];
+  const updates = {};
 
-  if (name !== undefined) {
-    updates.push("name = ?");
-    values.push(name);
-  }
-  if (email !== undefined) {
-    updates.push("email = ?");
-    values.push(email);
-  }
-  if (role !== undefined) {
-    updates.push("role = ?");
-    values.push(role);
-  }
+  if (name !== undefined) updates.name = name;
+  if (email !== undefined) updates.email = email;
+  if (role !== undefined) updates.role = role;
   if (group_id !== undefined) {
-    const normalizedGroupId = group_id === "" ? null : group_id;
-    updates.push("group_id = ?");
-    values.push(normalizedGroupId);
+    updates.group_id = group_id === "" ? null : group_id;
   }
-
   if (password) {
-    const hash = await bcrypt.hash(password, 10);
-    updates.push("password_hash = ?");
-    values.push(hash);
+    updates.password_hash = await bcrypt.hash(password, 10);
   }
 
-  if (updates.length === 0) return null;
+  if (Object.keys(updates).length === 0) return null;
 
-  values.push(id);
-  await db.query(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`, values);
-
+  await User.findByIdAndUpdate(id, updates);
   return { id, message: "Updated successfully" };
 };
 
 const deleteUser = async (id) => {
-  await db.query("DELETE FROM users WHERE id = ?", [id]);
+  await User.findByIdAndDelete(id);
 };
 
 export default { getAllUsers, createUser, updateUser, deleteUser };

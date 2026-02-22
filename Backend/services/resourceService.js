@@ -1,67 +1,57 @@
-import db from "../config/db.js";
+import Group from "../models/Group.js";
+import Room from "../models/Room.js";
+import Subject from "../models/Subject.js";
 
 // Groups
 const getAllGroups = async () => {
-  const [rows] = await db.query("SELECT * FROM `groups`");
-  return rows;
+  return Group.find().lean().then((rows) =>
+    rows.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest }))
+  );
 };
 
 const createGroup = async (name) => {
-  const [result] = await db.query("INSERT INTO `groups` (`name`) VALUES (?)", [name]);
-  return { id: result.insertId };
+  const group = await Group.create({ name });
+  return { id: group._id };
 };
 
 const deleteGroup = async (id) => {
-  await db.query("DELETE FROM `groups` WHERE `id` = ?", [id]);
+  await Group.findByIdAndDelete(id);
 };
 
 // Rooms
 const getAllRooms = async () => {
-  const [rows] = await db.query("SELECT * FROM `rooms`");
-  return rows;
+  return Room.find().lean().then((rows) =>
+    rows.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest }))
+  );
 };
 
 const createRoom = async (name, capacity) => {
-  const [result] = await db.query(
-    "INSERT INTO `rooms` (`name`, `capacity`) VALUES (?, ?)",
-    [name, capacity]
-  );
-  return { id: result.insertId };
+  const room = await Room.create({ name, capacity });
+  return { id: room._id };
 };
 
 const deleteRoom = async (id) => {
-  await db.query("DELETE FROM `rooms` WHERE `id` = ?", [id]);
+  await Room.findByIdAndDelete(id);
 };
 
 // Subjects
 const getAllSubjects = async () => {
-  const [rows] = await db.query("SELECT * FROM `subjects`");
-  return rows;
+  return Subject.find().lean().then((rows) =>
+    rows.map(({ _id, __v, ...rest }) => ({ id: _id, ...rest }))
+  );
 };
 
 const createSubject = async (name, code) => {
-  const [result] = await db.query(
-    "INSERT INTO `subjects` (`name`, `code`) VALUES (?, ?)",
-    [name, code]
-  );
-  return { id: result.insertId };
+  const subject = await Subject.create({ name, code });
+  return { id: subject._id };
 };
 
 const deleteSubject = async (id) => {
-  await db.query("DELETE FROM `subjects` WHERE `id` = ?", [id]);
+  await Subject.findByIdAndDelete(id);
 };
 
 export default {
-  // groups
-  getAllGroups,
-  createGroup,
-  deleteGroup,
-  // rooms
-  getAllRooms,
-  createRoom,
-  deleteRoom,
-  // subjects
-  getAllSubjects,
-  createSubject,
-  deleteSubject,
+  getAllGroups, createGroup, deleteGroup,
+  getAllRooms, createRoom, deleteRoom,
+  getAllSubjects, createSubject, deleteSubject,
 };

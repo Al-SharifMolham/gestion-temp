@@ -32,6 +32,7 @@ export const AuthProvider = ({ children }) => {
         storage.setToken(token);
         storage.setUser(user);
         setUser(user);
+        return user;
     };
 
     const logout = () => {

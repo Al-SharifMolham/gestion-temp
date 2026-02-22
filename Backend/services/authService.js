@@ -1,4 +1,4 @@
-import db from "../config/db.js";
+import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -8,42 +8,35 @@ const getJwtSecret = () => {
   return secret;
 };
 
-const sanitizeUser = (user) => {
-  if (!user) return null;
-  // never leak password hash
-  // eslint-disable-next-line no-unused-vars
-  const { password_hash, ...safe } = user;
-  return safe;
-};
-
 const login = async (email, password) => {
   const cleanEmail = String(email).trim().toLowerCase();
   const cleanPassword = String(password);
 
-  const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [cleanEmail]);
-  const user = rows?.[0];
-
+  const user = await User.findOne({ email: cleanEmail }).select("+password_hash").lean();
   if (!user) throw new Error("Invalid credentials");
 
   const isMatch = await bcrypt.compare(cleanPassword, user.password_hash);
   if (!isMatch) throw new Error("Invalid credentials");
 
   const token = jwt.sign(
-    { id: user.id, role: user.role, group_id: user.group_id },
+    { id: user._id, role: user.role, group_id: user.group_id },
     getJwtSecret(),
     { expiresIn: "24h" }
   );
 
-  return { token, user: sanitizeUser(user) };
+  const { password_hash, __v, ...safe } = user;
+  safe.id = safe._id;
+  delete safe._id;
+
+  return { token, user: safe };
 };
 
-
 const getUserById = async (id) => {
-  const [rows] = await db.query(
-    "SELECT id, name, email, role, group_id FROM users WHERE id = ?",
-    [id]
-  );
-  return rows?.[0] ?? null;
+  const user = await User.findById(id).select("name email role group_id").lean();
+  if (!user) return null;
+  user.id = user._id;
+  delete user._id;
+  return user;
 };
 
 export default { login, getUserById };

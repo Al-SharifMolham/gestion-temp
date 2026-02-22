@@ -1,15 +1,17 @@
 import "dotenv/config";
-import mysql from "mysql2/promise";
+import mongoose from "mongoose";
 
-const isDocker = process.env.DB_HOST === "db"; // أو خليه متغير ENV
+const MONGO_URI =
+  process.env.MONGO_URI || "mongodb://127.0.0.1:27017/timetable_db";
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || "127.0.0.1",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "timetable_db",
-  waitForConnections: true,
-  connectionLimit: 10,
-});
+const connectDB = async () => {
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log("✅ Connected to MongoDB");
+  } catch (err) {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1);
+  }
+};
 
-export default pool;
+export default connectDB;

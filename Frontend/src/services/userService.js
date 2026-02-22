@@ -28,7 +28,7 @@ export default {
     },
 
     // Resource helpers (Groups, Rooms, Subjects)
-    getGroups: async () => { const res = await apiClient.get('/api/groups'); return res.data; },
-    getRooms: async () => { const res = await apiClient.get('/api/rooms'); return res.data; },
-    getSubjects: async () => { const res = await apiClient.get('/api/subjects'); return res.data; }
+    getGroups: async () => { const res = await apiClient.get('/resources/groups'); return res.data; },
+    getRooms: async () => { const res = await apiClient.get('/resources/rooms'); return res.data; },
+    getSubjects: async () => { const res = await apiClient.get('/resources/subjects'); return res.data; }
 };
