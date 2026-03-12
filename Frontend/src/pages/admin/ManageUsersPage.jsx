@@ -4,193 +4,104 @@ import Modal from '../../components/ui/Modal';
 import Loader from '../../components/ui/Loader';
 
 const USER_ROLES = ['admin', 'instructor', 'student'];
-
 const roleBadge = (role) => {
-    const styles = {
-        admin: 'badge-blue',
-        instructor: 'badge-amber',
-        student: 'badge-green',
-    };
-    return <span className={styles[role] || 'badge-gray'}>{role}</span>;
+  const cls = { admin:'badge-blue', instructor:'badge-amber', student:'badge-green' };
+  return <span className={`badge ${cls[role]||'badge-gray'}`}>{role}</span>;
 };
+const labelSt = { display:'block', fontSize:10, fontWeight:700, color:'var(--text-3)', marginBottom:7, letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:"'JetBrains Mono', monospace" };
+const th = { padding:'10px 18px', textAlign:'left', fontSize:9, fontWeight:700, color:'var(--text-4)', letterSpacing:'0.12em', textTransform:'uppercase', fontFamily:"'JetBrains Mono', monospace" };
 
 export default function ManageUsersPage() {
-    const [users, setUsers] = useState([]);
-    const [groups, setGroups] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingUser, setEditingUser] = useState(null);
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'student', group_id: '' });
-    const [error, setError] = useState('');
+  const [users, setUsers] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name:'', email:'', password:'', role:'student', group_id:'' });
+  const [error, setError] = useState('');
 
-    const loadData = async () => {
-        setLoading(true);
-        try {
-            const [uData, gData] = await Promise.all([
-                userService.getAllUsers(),
-                userService.getGroups()
-            ]);
-            setUsers(uData);
-            setGroups(gData);
-        } catch (err) {
-            console.error('Failed to load data', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const load = async () => { setLoading(true); try { const [u,g] = await Promise.all([userService.getAllUsers(), userService.getGroups()]); setUsers(u); setGroups(g); } catch(e){console.error(e);} finally{setLoading(false);} };
+  useEffect(()=>{ load(); },[]);
 
-    useEffect(() => { loadData(); }, []);
+  const openCreate = () => { setEditing(null); setForm({name:'',email:'',password:'',role:'student',group_id:''}); setError(''); setIsOpen(true); };
+  const openEdit   = u => { setEditing(u); setForm({name:u.name,email:u.email,password:'',role:u.role,group_id:u.group_id||''}); setError(''); setIsOpen(true); };
 
-    const handleCreate = () => {
-        setEditingUser(null);
-        setFormData({ name: '', email: '', password: '', role: 'student', group_id: '' });
-        setError('');
-        setIsModalOpen(true);
-    };
+  const handleDelete = async id => {
+    if (!window.confirm('Supprimer cet utilisateur ?')) return;
+    try { await userService.deleteUser(id); load(); } catch { alert('Échec de la suppression'); }
+  };
 
-    const handleEdit = (user) => {
-        setEditingUser(user);
-        setFormData({ name: user.name, email: user.email, password: '', role: user.role, group_id: user.group_id || '' });
-        setError('');
-        setIsModalOpen(true);
-    };
+  const handleSubmit = async e => {
+    e.preventDefault(); setError('');
+    if (!form.email.includes('@')) { setError('Adresse e-mail invalide'); return; }
+    if (!editing && form.password.length < 6) { setError('Mot de passe : 6 caractères minimum'); return; }
+    if (form.password && form.password.length < 6) { setError('Mot de passe : 6 caractères minimum'); return; }
+    try {
+      if (editing) { const p={...form}; if(!p.password) delete p.password; await userService.updateUser(editing.id,p); }
+      else { await userService.createUser(form); }
+      setIsOpen(false); load();
+    } catch(e) { setError(e.response?.data?.message||'Échec de la sauvegarde'); }
+  };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this user?')) {
-            try {
-                await userService.deleteUser(id);
-                loadData();
-            } catch (err) {
-                alert('Failed to delete user');
-            }
-        }
-    };
-
-    const validateForm = () => {
-        if (!formData.email.includes('@')) return 'Invalid email address';
-        if (!editingUser && formData.password.length < 6) return 'Password must be at least 6 characters';
-        if (formData.password && formData.password.length < 6) return 'Password must be at least 6 characters';
-        return null;
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        const validationError = validateForm();
-        if (validationError) { setError(validationError); return; }
-
-        try {
-            if (editingUser) {
-                const payload = { ...formData };
-                if (!payload.password) delete payload.password;
-                await userService.updateUser(editingUser.id, payload);
-            } else {
-                await userService.createUser(formData);
-            }
-            setIsModalOpen(false);
-            loadData();
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to save user');
-        }
-    };
-
-    return (
-        <div className="animate-slide-up">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Users</h1>
-                    <p className="text-sm text-gray-500 mt-1">{users.length} total users</p>
-                </div>
-                <button onClick={handleCreate} className="btn-primary flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                    New User
-                </button>
-            </div>
-
-            {loading ? <Loader /> : (
-                <div className="bg-white rounded-xl shadow-card border border-gray-100/80 overflow-hidden">
-                    <table className="min-w-full">
-                        <thead>
-                            <tr className="border-b border-gray-100">
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-                                <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Group</th>
-                                <th className="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {users.map(user => (
-                                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="text-sm font-medium text-gray-900">{user.name}</span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap">{roleBadge(user.role)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.group_name || <span className="text-gray-300">—</span>}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                                        <button onClick={() => handleEdit(user)} className="btn-ghost text-indigo-600 hover:text-indigo-800 mr-1">Edit</button>
-                                        <button onClick={() => handleDelete(user.id)} className="btn-ghost text-red-500 hover:text-red-700">Delete</button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {users.length === 0 && (
-                                <tr>
-                                    <td colSpan="5" className="px-6 py-12 text-center">
-                                        <p className="text-sm text-gray-400">No users found</p>
-                                        <button onClick={handleCreate} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium mt-1">Create one</button>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingUser ? 'Edit User' : 'New User'}>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {error && (
-                        <div className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg border border-red-100">{error}</div>
-                    )}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Name</label>
-                        <input type="text" className="input-field" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Email</label>
-                        <input type="email" className="input-field" required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                            Password {editingUser && <span className="text-gray-400 font-normal">(leave blank to keep)</span>}
-                        </label>
-                        <input type="password" className="input-field" placeholder={editingUser ? '••••••' : 'Min 6 characters'} value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1.5">Role</label>
-                            <select className="input-field capitalize" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
-                                {USER_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
-                        </div>
-                        {formData.role === 'student' && (
-                            <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1.5">Group</label>
-                                <select className="input-field" value={formData.group_id} onChange={e => setFormData({ ...formData, group_id: e.target.value })}>
-                                    <option value="">Select Group</option>
-                                    {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                                </select>
-                            </div>
-                        )}
-                    </div>
-                    <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">Cancel</button>
-                        <button type="submit" className="btn-primary">{editingUser ? 'Save Changes' : 'Create User'}</button>
-                    </div>
-                </form>
-            </Modal>
+  return (
+    <div className="animate-slide-up" style={{fontFamily:"'Sora',sans-serif"}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24}}>
+        <div>
+          <p style={{margin:'0 0 5px',fontSize:9,fontWeight:700,color:'var(--accent)',letterSpacing:'0.15em',textTransform:'uppercase',fontFamily:"'JetBrains Mono',monospace"}}>OFPPT — Gestion</p>
+          <h1 style={{margin:'0 0 4px',fontSize:22,fontWeight:800,color:'var(--text-1)',letterSpacing:'-0.02em'}}>Utilisateurs</h1>
+          <p style={{margin:0,fontSize:13,color:'var(--text-3)'}}>{users.length} utilisateur(s) au total</p>
         </div>
-    );
+        <button onClick={openCreate} className="btn-primary" style={{display:'flex',alignItems:'center',gap:6}}>
+          <svg width={13} height={13} fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+          Nouvel utilisateur
+        </button>
+      </div>
+
+      {loading ? <Loader/> : (
+        <div style={{background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:16,overflow:'hidden',boxShadow:'var(--shadow-card)'}}>
+          <table style={{width:'100%',borderCollapse:'collapse',fontFamily:"'Sora',sans-serif"}}>
+            <thead>
+              <tr style={{borderBottom:'1px solid var(--border)',background:'var(--bg-elevated)'}}>
+                <th style={th}>Nom</th><th style={th}>E-mail</th><th style={th}>Rôle</th><th style={th}>Groupe</th><th style={{...th,textAlign:'right'}}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u=>(
+                <tr key={u.id} style={{borderBottom:'1px solid var(--border)',transition:'background 0.1s'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--bg-elevated)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  <td style={{padding:'13px 18px',fontSize:13,fontWeight:600,color:'var(--text-1)',whiteSpace:'nowrap'}}>{u.name}</td>
+                  <td style={{padding:'13px 18px',fontSize:12,color:'var(--text-3)',whiteSpace:'nowrap',fontFamily:"'JetBrains Mono',monospace"}}>{u.email}</td>
+                  <td style={{padding:'13px 18px',whiteSpace:'nowrap'}}>{roleBadge(u.role)}</td>
+                  <td style={{padding:'13px 18px',fontSize:13,color:'var(--text-3)',whiteSpace:'nowrap'}}>{u.group_name||<span style={{color:'var(--text-4)'}}>—</span>}</td>
+                  <td style={{padding:'13px 18px',textAlign:'right',whiteSpace:'nowrap'}}>
+                    <button onClick={()=>openEdit(u)} className="btn-ghost" style={{color:'var(--accent)',marginRight:4}}>Modifier</button>
+                    <button onClick={()=>handleDelete(u.id)} className="btn-ghost" style={{color:'var(--red)'}}>Supprimer</button>
+                  </td>
+                </tr>
+              ))}
+              {users.length===0&&<tr><td colSpan={5} style={{padding:48,textAlign:'center',fontSize:13,color:'var(--text-4)'}}>Aucun utilisateur —&nbsp;<button onClick={openCreate} style={{background:'none',border:'none',cursor:'pointer',color:'var(--accent)',fontWeight:600,fontSize:13}}>en créer un</button></td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Modal isOpen={isOpen} onClose={()=>setIsOpen(false)} title={editing?'Modifier l\'utilisateur':'Nouvel utilisateur'}>
+        <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:14}}>
+          {error&&<div style={{padding:'9px 13px',borderRadius:10,background:'var(--red-dim)',border:'1px solid rgba(200,16,46,0.22)',fontSize:13,color:'var(--red-text)'}}>{error}</div>}
+          <div><label style={labelSt}>Nom</label><input type="text" className="input-field" required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
+          <div><label style={labelSt}>E-mail</label><input type="email" className="input-field" required value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></div>
+          <div><label style={labelSt}>Mot de passe {editing&&<span style={{color:'var(--text-4)',fontWeight:400,textTransform:'none',letterSpacing:0}}>(laisser vide pour conserver)</span>}</label><input type="password" className="input-field" placeholder={editing?'••••••':'6 caractères minimum'} value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <div><label style={labelSt}>Rôle</label><select className="input-field" value={form.role} onChange={e=>setForm({...form,role:e.target.value})}>{USER_ROLES.map(r=><option key={r} value={r}>{r}</option>)}</select></div>
+            {form.role==='student'&&<div><label style={labelSt}>Groupe</label><select className="input-field" value={form.group_id} onChange={e=>setForm({...form,group_id:e.target.value})}><option value="">Sélectionner</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></div>}
+          </div>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:8,paddingTop:6,borderTop:'1px solid var(--border)',marginTop:2}}>
+            <button type="button" onClick={()=>setIsOpen(false)} className="btn-secondary">Annuler</button>
+            <button type="submit" className="btn-primary">{editing?'Enregistrer':'Créer'}</button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
 }

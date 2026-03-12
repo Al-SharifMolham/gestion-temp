@@ -3,15 +3,19 @@ import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 
 export default function AppLayout() {
-    return (
-        <div className="min-h-screen bg-gray-50/80">
-            <Navbar />
-            <div className="flex">
-                <Sidebar />
-                <main className="flex-1 md:ml-64 p-8 min-h-[calc(100vh-49px)] animate-fade-in">
-                    <Outlet />
-                </main>
-            </div>
-        </div>
-    );
+  return (
+    <div style={{ minHeight:'100vh', background:'var(--bg-base)', transition:'background 0.25s' }}>
+      <Navbar />
+      <div style={{ display:'flex' }}>
+        <Sidebar />
+        <main style={{
+          flex: 1, marginLeft: 230,
+          padding: '32px 36px',
+          minHeight: 'calc(100vh - 54px)',
+        }} className="animate-fade-in">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
 }

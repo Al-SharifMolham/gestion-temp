@@ -5,34 +5,46 @@ import storage from '../utils/storage';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(storage.getUser());
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const initAuth = async () => {
             const token = storage.getToken();
-            if (token) {
-                try {
-                    const userData = await authService.getMe();
-                    setUser(userData);
-                    storage.setUser(userData); // Sync latest
-                } catch (err) {
-                    console.error('Auth check failed', err);
-                    storage.clear();
-                    setUser(null);
-                }
+
+            if (!token) {
+                setUser(null);
+                setIsLoading(false);
+                return;
             }
-            setIsLoading(false);
+
+            try {
+                const userData = await authService.getMe();
+                setUser(userData);
+                storage.setUser(userData);
+            } catch (err) {
+                console.error('Auth check failed', err);
+                storage.clear();
+                setUser(null);
+            } finally {
+                setIsLoading(false);
+            }
         };
+
         initAuth();
     }, []);
 
     const login = async (email, password) => {
-        const { token, user } = await authService.login(email, password);
-        storage.setToken(token);
-        storage.setUser(user);
-        setUser(user);
-        return user;
+        setIsLoading(true);
+        try {
+            const { token, user } = await authService.login(email, password);
+            storage.setToken(token);
+            storage.setUser(user);
+            setUser(user);
+            return user;
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const logout = () => {
