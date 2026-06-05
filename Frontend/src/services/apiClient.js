@@ -2,10 +2,10 @@ import axios from 'axios';
 import storage from '../utils/storage';
 
 const apiClient = axios.create({
-    baseURL: 'http://localhost:5000/api',
-    headers: {
-        'Content-Type': 'application/json'
-    }
+  baseURL: '/api',
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -19,7 +19,7 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use((response) => response, (error) => {
     if (error.response && error.response.status === 401) {
         storage.clear();
-        window.location.href = '/login';
+        window.location.href = '/login';        
     }
     return Promise.reject(error);
 });
